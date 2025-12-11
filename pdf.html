@@ -5,67 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>usman PDF Creator</title>
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Arial', sans-serif;
-        }
-
-        body {
-            background: #f5f5f5;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-
-        .container {
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-            width: 90%;
-            max-width: 600px;
-            text-align: center;
-        }
-
-        h1 {
-            margin-bottom: 20px;
-            color: #333;
-        }
-
-        textarea {
-            width: 100%;
-            height: 200px;
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid #ccc;
-            resize: none;
-            font-size: 16px;
-            margin-bottom: 20px;
-        }
-
-        button {
-            padding: 12px 25px;
-            border: none;
-            background: #4CAF50;
-            color: white;
-            font-size: 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-
-        button:hover {
-            background: #45a049;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+        body { background: #f5f5f5; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); width: 90%; max-width: 700px; text-align: center; }
+        h1 { margin-bottom: 20px; color: #333; }
+        textarea { width: 100%; height: 250px; padding: 15px; border-radius: 8px; border: 1px solid #ccc; resize: none; font-size: 16px; margin-bottom: 15px; }
+        input, button { padding: 10px 15px; border-radius: 8px; border: 1px solid #ccc; font-size: 14px; margin: 5px; }
+        button { background: #4CAF50; color: white; border: none; cursor: pointer; transition: background 0.3s; }
+        button:hover { background: #45a049; }
+        .controls { margin-bottom: 15px; }
+        label { font-size: 14px; margin-right: 5px; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>PDF Creator</h1>
         <textarea id="pdfText" placeholder="Write your content here..."></textarea>
+        <div class="controls">
+            <label for="pageStart">Start Page:</label>
+            <input type="number" id="pageStart" min="1" value="1">
+            <label for="pageEnd">End Page:</label>
+            <input type="number" id="pageEnd" min="1" value="1">
+        </div>
         <button id="generateBtn">Generate PDF</button>
     </div>
 
@@ -74,17 +35,42 @@
     <script>
         document.getElementById('generateBtn').addEventListener('click', () => {
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
+            const doc = new jsPDF('p', 'mm', 'a4'); // portrait, mm, A4
 
             const text = document.getElementById('pdfText').value;
+            const pageStart = parseInt(document.getElementById('pageStart').value);
+            const pageEnd = parseInt(document.getElementById('pageEnd').value);
 
             if(text.trim() === "") {
                 alert("Please write something to generate PDF!");
                 return;
             }
+            if(pageStart < 1 || pageEnd < pageStart) {
+                alert("Please enter a valid page range!");
+                return;
+            }
 
-            const lines = doc.splitTextToSize(text, 180); // wrap text
-            doc.text(lines, 15, 20);
+            const lineHeight = 7; // space between lines
+            const pageHeight = 297; // A4 mm height
+            const margin = 20;
+            const maxLineHeight = pageHeight - 2 * margin;
+
+            const lines = doc.splitTextToSize(text, 170); // wrap text width
+            let currentHeight = margin;
+            let currentPage = 1;
+
+            for (let i = 0; i < lines.length; i++) {
+                if(currentHeight + lineHeight > maxLineHeight) {
+                    doc.addPage();
+                    currentPage++;
+                    currentHeight = margin;
+                }
+                if(currentPage >= pageStart && currentPage <= pageEnd) {
+                    doc.text(lines[i], margin, currentHeight);
+                }
+                currentHeight += lineHeight;
+            }
+
             doc.save('document.pdf');
         });
     </script>
