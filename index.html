@@ -3,67 +3,119 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PDF Creator</title>
+<title>PDF/HTML Exporter</title>
 <style>
-    * { box-sizing: border-box; margin:0; padding:0; font-family: Arial,sans-serif;}
-    body { background:#f5f5f5; display:flex; justify-content:center; align-items:center; min-height:100vh;}
-    .container { background:white; padding:30px; border-radius:12px; box-shadow:0 5px 20px rgba(0,0,0,0.1); width:90%; max-width:700px; text-align:center;}
-    h1 { margin-bottom:20px; color:#333; }
-    textarea { width:100%; height:250px; padding:15px; border-radius:8px; border:1px solid #ccc; resize:none; font-size:16px; margin-bottom:15px; }
-    select, button { padding:10px 15px; border-radius:8px; border:1px solid #ccc; font-size:14px; margin:5px; }
-    button { background:#4CAF50; color:white; border:none; cursor:pointer; transition:0.3s; }
-    button:hover { background:#45a049; }
-    label { font-size:14px; margin-right:5px; }
+* { box-sizing:border-box; margin:0; padding:0; font-family:Arial,sans-serif;}
+body { background:#f5f5f5; display:flex; justify-content:center; align-items:center; min-height:100vh;}
+.container { background:white; padding:30px; border-radius:12px; box-shadow:0 5px 20px rgba(0,0,0,0.1); width:90%; max-width:700px; text-align:center;}
+h1 { margin-bottom:20px; color:#333; }
+textarea { width:100%; height:250px; padding:15px; border-radius:8px; border:1px solid #ccc; resize:none; font-size:16px; margin-bottom:15px; white-space:pre-wrap; line-height:1.5;}
+select, button { padding:10px 15px; border-radius:8px; border:1px solid #ccc; font-size:14px; margin:5px; }
+button { background:#4CAF50; color:white; border:none; cursor:pointer; transition:0.3s; }
+button:hover { background:#45a049; }
+label { font-size:14px; margin-right:5px; }
 </style>
 </head>
 <body>
 <div class="container">
-    <h1>PDF Creator</h1>
-    <textarea id="pdfText" placeholder="Write your content here..."></textarea>
+    <h1>Export Text</h1>
+    <textarea id="pdfText" placeholder="Type here... 😊🚀❤️"></textarea>
     <div class="controls">
-        <label for="pageSize">Page Size:</label>
+        <label for="pageSize">Page Size (PDF only):</label>
         <select id="pageSize">
             <option value="a4">A4</option>
             <option value="a5">A5</option>
             <option value="letter">Letter</option>
         </select>
+        <label for="fontSize">Text Size:</label>
+        <select id="fontSize">
+            <option value="12">12 px</option>
+            <option value="14" selected>14 px</option>
+            <option value="16">16 px</option>
+            <option value="18">18 px</option>
+            <option value="20">20 px</option>
+        </select>
+        <label for="exportType">Export As:</label>
+        <select id="exportType">
+            <option value="pdf">PDF</option>
+            <option value="html">HTML</option>
+        </select>
     </div>
-    <button id="generateBtn">Generate PDF</button>
+    <button id="generateBtn">Generate</button>
 </div>
 
-<!-- jsPDF CDN -->
+<!-- jsPDF + html2canvas -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+
 <script>
-document.getElementById('generateBtn').addEventListener('click', () => {
+document.getElementById('generateBtn').addEventListener('click', async () => {
     const { jsPDF } = window.jspdf;
     const text = document.getElementById('pdfText').value;
     const pageSize = document.getElementById('pageSize').value;
+    const fontSize = parseInt(document.getElementById('fontSize').value);
+    const exportType = document.getElementById('exportType').value;
 
-    if(text.trim() === "") {
-        alert("Please write something to generate PDF!");
+    if(!text.trim()){
+        alert("Please write something!");
         return;
     }
 
-    const doc = new jsPDF('p', 'mm', pageSize);
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const lineHeight = 7;
-    const margin = 20;
-    const maxLineHeight = pageHeight - 2 * margin;
+    if(exportType === 'html'){
+        // HTML Export
+        const blob = new Blob([`<html><head><meta charset="UTF-8"><title>Exported HTML</title></head><body style="font-family:Arial, 'Segoe UI Emoji', 'Noto Color Emoji'; font-size:${fontSize}px; white-space:pre-wrap; line-height:1.5;">${text.replace(/\n/g,'<br>')}</body></html>`], {type:'text/html'});
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'exported_text.html';
+        link.click();
+        URL.revokeObjectURL(url);
+    } else {
+        // PDF Export
+        const tempDiv = document.createElement('div');
+        tempDiv.style.width = '800px';
+        tempDiv.style.padding = '20px';
+        tempDiv.style.fontSize = fontSize + 'px';
+        tempDiv.style.fontFamily = 'Arial, "Segoe UI Emoji", "Noto Color Emoji"';
+        tempDiv.style.whiteSpace = 'pre-wrap';
+        tempDiv.style.lineHeight = '1.5';
+        tempDiv.textContent = text;
+        document.body.appendChild(tempDiv);
 
-    const lines = doc.splitTextToSize(text, pageWidth - 2*margin);
-    let currentHeight = margin;
+        const canvas = await html2canvas(tempDiv, { scale:2 });
+        const imgData = canvas.toDataURL('image/png');
+        document.body.removeChild(tempDiv);
 
-    for(let i=0; i<lines.length; i++) {
-        if(currentHeight + lineHeight > maxLineHeight) {
-            doc.addPage();
-            currentHeight = margin;
+        const doc = new jsPDF('p','mm',pageSize);
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const imgProps = { width: canvas.width, height: canvas.height };
+        const pdfWidth = pageWidth - 20;
+        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+        if(pdfHeight <= pageHeight - 20){
+            doc.addImage(imgData,'PNG',10,10,pdfWidth,pdfHeight);
+        } else {
+            let remainingHeight = imgProps.height;
+            let position = 0;
+            const ratio = imgProps.width / pdfWidth;
+
+            while(remainingHeight > 0){
+                const canvasPage = document.createElement('canvas');
+                canvasPage.width = canvas.width;
+                canvasPage.height = Math.min(canvas.height - position, (pageHeight - 20) * ratio);
+                const ctx = canvasPage.getContext('2d');
+                ctx.drawImage(canvas,0,position,canvas.width,canvasPage.height,0,0,canvas.width,canvasPage.height);
+                const imgPage = canvasPage.toDataURL('image/png');
+                doc.addImage(imgPage,'PNG',10,10,pdfWidth,(canvasPage.height / canvas.width) * pdfWidth);
+                position += canvasPage.height;
+                remainingHeight -= canvasPage.height;
+                if(remainingHeight > 0) doc.addPage();
+            }
         }
-        doc.text(lines[i], margin, currentHeight);
-        currentHeight += lineHeight;
-    }
 
-    doc.save('document.pdf');
+        doc.save('exported_text.pdf');
+    }
 });
 </script>
 </body>
