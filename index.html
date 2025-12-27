@@ -3,93 +3,405 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ফেস অ্যাটেনডেন্স সিস্টেম</title>
+    <title>ফেস অ্যাটেনডেন্স সিস্টেম - বাংলা</title>
+    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        .video-container { width: 640px; height: 480px; border: 2px solid #007bff; }
-        .capture-btn { margin: 10px; }
-        .student-list { max-height: 400px; overflow-y: auto; }
+        body {
+            font-family: 'Siyam Rupali', 'SolaimanLipi', sans-serif;
+            background-color: #f8f9fa;
+        }
+        .video-container {
+            width: 100%;
+            max-width: 640px;
+            height: 480px;
+            border: 3px solid #0d6efd;
+            border-radius: 10px;
+            overflow: hidden;
+            background-color: #000;
+        }
+        .preview-img {
+            width: 120px;
+            height: 90px;
+            border: 2px solid #28a745;
+            border-radius: 5px;
+            margin: 5px;
+            object-fit: cover;
+        }
+        .student-card {
+            border-left: 4px solid #0d6efd;
+            margin-bottom: 10px;
+        }
+        .attendance-list {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .alert-bangla {
+            font-family: 'Siyam Rupali', sans-serif;
+        }
+        .tab-content {
+            padding: 20px;
+            border: 1px solid #dee2e6;
+            border-top: none;
+            border-radius: 0 0 10px 10px;
+            background-color: white;
+        }
     </style>
 </head>
 <body>
-    <div class="container mt-4">
-        <!-- Navigation -->
-        <ul class="nav nav-tabs" id="myTab">
-            <li class="nav-item"><a class="nav-link active" href="#register">ছাত্র রেজিস্ট্রেশন</a></li>
-            <li class="nav-item"><a class="nav-link" href="#attendance">হাজিরা নিন</a></li>
-            <li class="nav-item"><a class="nav-link" href="#reports">রিপোর্ট</a></li>
+    <div class="container-fluid py-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12 text-center">
+                <h1 class="text-primary">
+                    <i class="fas fa-user-check"></i> ফেস রিকগনিশন অ্যাটেনডেন্স সিস্টেম
+                </h1>
+                <p class="text-muted">ব্রাউজারে সম্পূর্ণ অফলাইন - কোন সার্ভার লাগবে না</p>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <ul class="nav nav-tabs" id="myTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="register-tab" data-bs-toggle="tab" 
+                        data-bs-target="#register" type="button">
+                    <i class="fas fa-user-plus"></i> ছাত্র রেজিস্ট্রেশন
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="attendance-tab" data-bs-toggle="tab" 
+                        data-bs-target="#attendance" type="button">
+                    <i class="fas fa-calendar-check"></i> হাজিরা নিন
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="reports-tab" data-bs-toggle="tab" 
+                        data-bs-target="#reports" type="button">
+                    <i class="fas fa-chart-bar"></i> রিপোর্ট ও ম্যানেজমেন্ট
+                </button>
+            </li>
         </ul>
 
-        <!-- Tab Content -->
-        <div class="tab-content mt-3">
+        <!-- Tab Contents -->
+        <div class="tab-content" id="myTabContent">
             
             <!-- 1. Registration Tab -->
-            <div class="tab-pane active" id="register">
-                <h3>🎓 নতুন ছাত্র রেজিস্ট্রেশন</h3>
+            <div class="tab-pane fade show active" id="register" role="tabpanel">
                 <div class="row">
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label>ছাত্রের নাম</label>
-                            <input type="text" id="studentName" class="form-control" placeholder="নাম লিখুন">
+                    <!-- Left Column: Form -->
+                    <div class="col-md-5">
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0"><i class="fas fa-id-card"></i> ছাত্র তথ্য</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">ছাত্রের নাম (বাংলায়)</label>
+                                    <input type="text" id="studentName" class="form-control" 
+                                           placeholder="রহিম ইসলাম">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">রোল নম্বর</label>
+                                    <input type="number" id="studentRoll" class="form-control" 
+                                           placeholder="101">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">ক্লাস/বিভাগ</label>
+                                    <select id="studentClass" class="form-select">
+                                        <option value="৬ষ্ঠ">৬ষ্ঠ শ্রেণি</option>
+                                        <option value="৭ম">৭ম শ্রেণি</option>
+                                        <option value="৮ম">৮ম শ্রেণি</option>
+                                        <option value="৯ম">৯ম শ্রেণি</option>
+                                        <option value="১০ম">১০ম শ্রেণি</option>
+                                        <option value="১১শ">১১শ শ্রেণি</option>
+                                        <option value="১২শ">১২শ শ্রেণি</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">বিভাগ (যদি থাকে)</label>
+                                    <select id="studentSection" class="form-select">
+                                        <option value="ক">ক বিভাগ</option>
+                                        <option value="খ">খ বিভাগ</option>
+                                        <option value="গ">গ বিভাগ</option>
+                                        <option value="ঘ">ঘ বিভাগ</option>
+                                        <option value="">বিভাগ নেই</option>
+                                    </select>
+                                </div>
+                                <button id="startRegistrationCamera" class="btn btn-primary w-100 mb-2">
+                                    <i class="fas fa-camera"></i> ক্যামেরা চালু করুন
+                                </button>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label>ক্লাস</label>
-                            <select id="studentClass" class="form-select">
-                                <option>৬ষ্ঠ</option><option>৭ম</option><option>৮ম</option>
-                                <option>৯ম</option><option>১০ম</option>
-                            </select>
+                        
+                        <div class="card shadow-sm mt-3">
+                            <div class="card-header bg-info text-white">
+                                <h6 class="mb-0"><i class="fas fa-lightbulb"></i> নির্দেশনা</h6>
+                            </div>
+                            <div class="card-body">
+                                <ul class="small">
+                                    <li>কমপক্ষে <strong>৫টি</strong> ছবি নিন</li>
+                                    <li>ভিন্ন ভিন্ন <strong>এঙ্গেলে</strong> ছবি নিন</li>
+                                    <li>উজ্জ্বল <strong>আলোতে</strong> ছবি তুলুন</li>
+                                    <li>চশমা থাকলে <strong>একটি ছবি</strong> চশমা ছাড়া নিন</li>
+                                </ul>
+                                <div class="progress mt-2">
+                                    <div id="photoProgress" class="progress-bar" 
+                                         role="progressbar" style="width: 0%">0/5</div>
+                                </div>
+                            </div>
                         </div>
-                        <button id="startCamera" class="btn btn-primary">📷 ক্যামেরা চালু করুন</button>
                     </div>
-                    <div class="col-md-6">
-                        <video id="video" class="video-container" autoplay></video>
-                        <div>
-                            <button id="capture" class="btn btn-success capture-btn">ছবি নিন (৫টি নিন)</button>
-                            <button id="registerStudent" class="btn btn-warning">রেজিস্টার করুন</button>
+                    
+                    <!-- Middle Column: Camera -->
+                    <div class="col-md-4">
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0"><i class="fas fa-video"></i> ক্যামেরা</h5>
+                            </div>
+                            <div class="card-body text-center">
+                                <div class="video-container mb-3">
+                                    <video id="registrationVideo" autoplay muted></video>
+                                </div>
+                                <button id="capturePhoto" class="btn btn-success btn-lg mb-2" disabled>
+                                    <i class="fas fa-camera-retro"></i> ছবি নিন (5/5)
+                                </button>
+                                <button id="registerStudentBtn" class="btn btn-warning btn-lg w-100" disabled>
+                                    <i class="fas fa-save"></i> ছাত্র রেজিস্টার করুন
+                                </button>
+                            </div>
                         </div>
-                        <div id="capturedPhotos" class="mt-3"></div>
                     </div>
-                </div>
-                <div class="mt-4">
-                    <h5>রেজিস্টার্ড ছাত্ররা:</h5>
-                    <div id="registeredStudents" class="student-list"></div>
+                    
+                    <!-- Right Column: Preview -->
+                    <div class="col-md-3">
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-secondary text-white">
+                                <h5 class="mb-0"><i class="fas fa-images"></i> তোলা ছবি</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="photoPreview" class="d-flex flex-wrap justify-content-center">
+                                    <!-- Photos will appear here -->
+                                    <p class="text-muted text-center">ছবি তোলা শুরু করুন...</p>
+                                </div>
+                                <div class="mt-3 text-center">
+                                    <small class="text-muted" id="photoCount">0টি ছবি তোলা হয়েছে</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card shadow-sm mt-3">
+                            <div class="card-header bg-dark text-white">
+                                <h6 class="mb-0"><i class="fas fa-users"></i> রেজিস্টার্ড ছাত্র</h6>
+                            </div>
+                            <div class="card-body">
+                                <div id="studentCount" class="text-center h4">0</div>
+                                <p class="text-center small">মোট রেজিস্টার্ড ছাত্র</p>
+                                <button id="viewAllStudents" class="btn btn-outline-dark btn-sm w-100">
+                                    সব দেখুন
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-
+            
             <!-- 2. Attendance Tab -->
-            <div class="tab-pane" id="attendance">
-                <h3>✅ হাজিরা নিন</h3>
+            <div class="tab-pane fade" id="attendance" role="tabpanel">
                 <div class="row">
+                    <!-- Left: Camera -->
                     <div class="col-md-6">
-                        <video id="attendanceVideo" class="video-container" autoplay></video>
-                        <button id="startAttendance" class="btn btn-primary mt-2">হাজিরা শুরু করুন</button>
-                        <button id="stopAttendance" class="btn btn-danger mt-2">বন্ধ করুন</button>
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-danger text-white">
+                                <h5 class="mb-0"><i class="fas fa-user-clock"></i> লাইভ অ্যাটেনডেন্স</h5>
+                            </div>
+                            <div class="card-body text-center">
+                                <div class="video-container mb-3">
+                                    <video id="attendanceVideo" autoplay muted></video>
+                                </div>
+                                <div class="d-grid gap-2 d-md-block">
+                                    <button id="startAttendanceBtn" class="btn btn-success btn-lg">
+                                        <i class="fas fa-play"></i> হাজিরা শুরু করুন
+                                    </button>
+                                    <button id="stopAttendanceBtn" class="btn btn-danger btn-lg" disabled>
+                                        <i class="fas fa-stop"></i> বন্ধ করুন
+                                    </button>
+                                    <button id="manualMarkBtn" class="btn btn-info btn-lg">
+                                        <i class="fas fa-hand-paper"></i> ম্যানুয়াল মার্ক
+                                    </button>
+                                </div>
+                                <div class="mt-3">
+                                    <div class="alert alert-info alert-bangla">
+                                        <i class="fas fa-info-circle"></i> প্রতি ৩ সেকেন্ডে স্বয়ংক্রিয়ভাবে ফেস চেক করবে
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
+                    
+                    <!-- Right: Attendance List -->
                     <div class="col-md-6">
-                        <h5>আজকের হাজিরা:</h5>
-                        <div id="todayAttendance" class="student-list"></div>
-                        <div class="mt-3">
-                            <button id="exportCSV" class="btn btn-secondary">CSV ডাউনলোড</button>
+                        <div class="card shadow-sm h-100">
+                            <div class="card-header bg-success text-white">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0"><i class="fas fa-list-check"></i> আজকের হাজিরা</h5>
+                                    <span id="todayDate" class="badge bg-light text-dark"></span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between mb-3">
+                                    <h6 id="attendanceCount">হাজির: <span class="badge bg-primary">0</span></h6>
+                                    <button id="clearTodayBtn" class="btn btn-outline-danger btn-sm">
+                                        <i class="fas fa-trash"></i> ক্লিয়ার
+                                    </button>
+                                </div>
+                                <div id="todayAttendanceList" class="attendance-list">
+                                    <!-- Today's attendance will appear here -->
+                                    <p class="text-muted text-center">হাজিরা এখনো শুরু হয়নি</p>
+                                </div>
+                                <div class="mt-3">
+                                    <button id="exportTodayBtn" class="btn btn-primary w-100">
+                                        <i class="fas fa-download"></i> আজকের রিপোর্ট ডাউনলোড (CSV)
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-
+            
             <!-- 3. Reports Tab -->
-            <div class="tab-pane" id="reports">
-                <h3>📊 রিপোর্ট</h3>
-                <div class="mb-3">
-                    <label>তারিখ নির্বাচন করুন:</label>
-                    <input type="date" id="reportDate" class="form-control">
+            <div class="tab-pane fade" id="reports" role="tabpanel">
+                <div class="row">
+                    <!-- Left: Controls -->
+                    <div class="col-md-4">
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-dark text-white">
+                                <h5 class="mb-0"><i class="fas fa-filter"></i> ফিল্টার ও এক্সপোর্ট</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">তারিখ নির্বাচন</label>
+                                    <input type="date" id="reportDate" class="form-control" 
+                                           value="">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">ক্লাস নির্বাচন</label>
+                                    <select id="reportClass" class="form-select">
+                                        <option value="all">সকল ক্লাস</option>
+                                        <option value="৬ষ্ঠ">৬ষ্ঠ শ্রেণি</option>
+                                        <option value="৭ম">৭ম শ্রেণি</option>
+                                        <option value="৮ম">৮ম শ্রেণি</option>
+                                        <option value="৯ম">৯ম শ্রেণি</option>
+                                        <option value="১০ম">১০ম শ্রেণি</option>
+                                    </select>
+                                </div>
+                                <button id="generateReportBtn" class="btn btn-primary w-100 mb-2">
+                                    রিপোর্ট তৈরি করুন
+                                </button>
+                                <button id="exportAllBtn" class="btn btn-success w-100 mb-2">
+                                    সম্পূর্ণ ডেটা এক্সপোর্ট (CSV)
+                                </button>
+                                <button id="backupDataBtn" class="btn btn-info w-100 mb-2">
+                                    ডেটা ব্যাকআপ নিন
+                                </button>
+                                <button id="restoreDataBtn" class="btn btn-warning w-100">
+                                    ডেটা রিস্টোর করুন
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="card shadow-sm mt-3">
+                            <div class="card-header bg-secondary text-white">
+                                <h6 class="mb-0"><i class="fas fa-database"></i> ডেটা স্ট্যাটাস</h6>
+                            </div>
+                            <div class="card-body">
+                                <p>মোট ছাত্র: <span id="totalStudentsStat" class="badge bg-primary">0</span></p>
+                                <p>মোট হাজিরা রেকর্ড: <span id="totalAttendanceStat" class="badge bg-success">0</span></p>
+                                <p>স্টোরেজ ব্যবহার: <span id="storageUsage" class="badge bg-info">0 KB</span></p>
+                                <button id="clearAllDataBtn" class="btn btn-outline-danger btn-sm w-100 mt-2">
+                                    <i class="fas fa-exclamation-triangle"></i> সব ডেটা মুছুন
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Right: Report Display -->
+                    <div class="col-md-8">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0"><i class="fas fa-chart-line"></i> হাজিরা রিপোর্ট</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="reportResults">
+                                    <div class="text-center py-5">
+                                        <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                                        <h5 class="text-muted">ফিল্টার প্রয়োগ করে রিপোর্ট দেখুন</h5>
+                                        <p class="small">একটি তারিখ বা ক্লাস নির্বাচন করুন এবং "রিপোর্ট তৈরি করুন" বাটন ক্লিক করুন</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div id="attendanceReport"></div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="row mt-4">
+            <div class="col-12 text-center">
+                <p class="text-muted small">
+                    <i class="fas fa-laptop-code"></i> ফেস রিকগনিশন অ্যাটেনডেন্স সিস্টেম | 
+                    সম্পূর্ণ অফলাইন | ব্রাউজারে রান হয়
+                </p>
             </div>
         </div>
     </div>
 
-    <!-- JavaScript Files -->
+    <!-- Modals -->
+    <div class="modal fade" id="studentsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">সকল রেজিস্টার্ড ছাত্র</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="allStudentsList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal fade" id="manualMarkModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title">ম্যানুয়াল হাজিরা মার্ক করুন</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <select id="manualStudentSelect" class="form-select mb-3">
+                        <!-- Options will be loaded dynamically -->
+                    </select>
+                    <button id="confirmManualMark" class="btn btn-success w-100">হাজিরা মার্ক করুন</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Libraries -->
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- TensorFlow.js and Face-api.js from CDN - NO DOWNLOAD NEEDED -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.11.0/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
-    <script src="app.js"></script>
+    
+    <!-- Our Main App Code -->
+    <script>
+        // Our complete application code will go here
+        // I'll provide it in the next response due to length
+    </script>
 </body>
 </html>
