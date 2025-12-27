@@ -1,359 +1,470 @@
-// app.js - Main Application Logic
+// Face Attendance System - Complete JavaScript Code
+// No model download needed - uses CDN
 
-// Global Variables
-let studentDescriptors = [];
-let currentStudent = null;
+// Global variables
+let registrationDescriptors = [];
+let capturedPhotos = [];
 let isAttendanceRunning = false;
 let attendanceInterval = null;
+let modelsLoaded = false;
 
-// Initialize FaceAPI Models
-async function loadFaceModels() {
-    try {
-        await faceapi.nets.ssdMobilenetv1.loadFromUri('/models');
-        await faceapi.nets.faceLandmark68Net.loadFromUri('/models');
-        await faceapi.nets.faceRecognitionNet.loadFromUri('/models');
-        console.log('Face models loaded successfully');
-    } catch (error) {
-        console.error('Error loading models:', error);
-        alert('মডেল লোড করতে সমস্যা হচ্ছে। ইন্টারনেট চেক করুন।');
+// বাংলা মাসের নাম
+const banglaMonths = [
+    'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন',
+    'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
+];
+
+// বাংলা দিনের নাম
+const banglaDays = ['রবিবার', 'সোমবার', 'মঙ্গলবার', 'বুধবার', 'বৃহস্পতিবার', 'শুক্রবার', 'শনিবার'];
+
+// ডেটা স্টোরেজ ক্লাস
+class AttendanceStorage {
+    constructor() {
+        this.studentsKey = 'face_attendance_students';
+        this.attendanceKey = 'face_attendance_records';
+        this.settingsKey = 'face_attendance_settings';
     }
-}
 
-// LocalStorage Functions
-const Storage = {
-    // Save students to localStorage
-    saveStudents(students) {
-        localStorage.setItem('attendance_app_students', JSON.stringify(students));
-    },
+    // ছাত্র সংরক্ষণ
+    saveStudent(student) {
+        const students = this.getAllStudents();
+        students.push(student);
+        localStorage.setItem(this.studentsKey, JSON.stringify(students));
+        return student.id;
+    }
 
-    // Get all students from localStorage
-    getStudents() {
-        const students = localStorage.getItem('attendance_app_students');
-        return students ? JSON.parse(students) : [];
-    },
+    // সকল ছাত্র পাওয়া
+    getAllStudents() {
+        const data = localStorage.getItem(this.studentsKey);
+        return data ? JSON.parse(data) : [];
+    }
 
-    // Save attendance record
-    saveAttendance(record) {
-        let attendance = this.getAttendance();
-        attendance.push(record);
-        localStorage.setItem('attendance_app_attendance', JSON.stringify(attendance));
-    },
-
-    // Get all attendance records
-    getAttendance() {
-        const attendance = localStorage.getItem('attendance_app_attendance');
-        return attendance ? JSON.parse(attendance) : [];
-    },
-
-    // Get today's attendance
-    getTodayAttendance() {
-        const today = new Date().toISOString().split('T')[0];
-        const allAttendance = this.getAttendance();
-        return allAttendance.filter(record => record.date === today);
-    },
-
-    // Get student by ID
+    // আইডি দিয়ে ছাত্র খোঁজা
     getStudentById(id) {
-        const students = this.getStudents();
+        const students = this.getAllStudents();
         return students.find(student => student.id === id);
     }
-};
 
-// Camera Functions
-async function startCamera(videoElement) {
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video: { width: 640, height: 480 }
-        });
-        videoElement.srcObject = stream;
-        return true;
-    } catch (error) {
-        console.error('Camera error:', error);
-        alert('ক্যামেরা অ্যাক্সেস করতে সমস্যা হচ্ছে।');
-        return false;
-    }
-}
-
-// Face Detection Functions
-async function getFaceDescriptor(videoElement) {
-    try {
-        const detection = await faceapi
-            .detectSingleFace(videoElement)
-            .withFaceLandmarks()
-            .withFaceDescriptor();
+    // হাজিরা সংরক্ষণ
+    saveAttendanceRecord(record) {
+        const records = this.getAllAttendance();
         
-        return detection ? detection.descriptor : null;
-    } catch (error) {
-        console.error('Face detection error:', error);
-        return null;
-    }
-}
-
-// Student Registration
-document.addEventListener('DOMContentLoaded', async function() {
-    // Load face models
-    await loadFaceModels();
-
-    // Tab switching
-    document.querySelectorAll('.nav-link').forEach(tab => {
-        tab.addEventListener('click', function(e) {
-            e.preventDefault();
-            document.querySelectorAll('.nav-link').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-            
-            this.classList.add('active');
-            const target = this.getAttribute('href');
-            document.querySelector(target).classList.add('active');
-        });
-    });
-
-    // Registration Tab - Start Camera
-    document.getElementById('startCamera').addEventListener('click', function() {
-        startCamera(document.getElementById('video'));
-        studentDescriptors = [];
-        document.getElementById('capturedPhotos').innerHTML = '';
-    });
-
-    // Capture Photo for Registration
-    document.getElementById('capture').addEventListener('click', async function() {
-        if (studentDescriptors.length >= 5) {
-            alert('৫টি ছবি already নেওয়া হয়েছে');
-            return;
-        }
-
-        const video = document.getElementById('video');
-        const descriptor = await getFaceDescriptor(video);
-        
-        if (descriptor) {
-            studentDescriptors.push(Array.from(descriptor)); // Convert Float32Array to regular array
-            
-            // Show captured photo preview
-            const canvas = document.createElement('canvas');
-            canvas.width = 160;
-            canvas.height = 120;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0, 160, 120);
-            
-            document.getElementById('capturedPhotos').appendChild(canvas);
-            
-            alert(`ছবি ${studentDescriptors.length}/৫ নেওয়া হয়েছে`);
-        } else {
-            alert('কোনো মুখ চিহ্নিত করা যায়নি!');
-        }
-    });
-
-    // Register Student
-    document.getElementById('registerStudent').addEventListener('click', function() {
-        const name = document.getElementById('studentName').value;
-        const className = document.getElementById('studentClass').value;
-        
-        if (!name || !className) {
-            alert('নাম এবং ক্লাস পূরণ করুন');
-            return;
-        }
-        
-        if (studentDescriptors.length < 3) {
-            alert('কমপক্ষে ৩টি ছবি নিন (৫টি ভালো)');
-            return;
-        }
-        
-        const student = {
-            id: Date.now().toString(),
-            name: name,
-            class: className,
-            descriptors: studentDescriptors,
-            registrationDate: new Date().toISOString()
-        };
-        
-        const students = Storage.getStudents();
-        students.push(student);
-        Storage.saveStudents(students);
-        
-        alert(`${name} সফলভাবে রেজিস্টার্ড হয়েছে!`);
-        loadRegisteredStudents();
-        
-        // Reset form
-        document.getElementById('studentName').value = '';
-        studentDescriptors = [];
-        document.getElementById('capturedPhotos').innerHTML = '';
-    });
-
-    // Attendance Tab - Start Attendance
-    document.getElementById('startAttendance').addEventListener('click', async function() {
-        const video = document.getElementById('attendanceVideo');
-        const started = await startCamera(video);
-        
-        if (started) {
-            isAttendanceRunning = true;
-            attendanceInterval = setInterval(async () => {
-                await processAttendance(video);
-            }, 3000); // Check every 3 seconds
-        }
-    });
-
-    // Stop Attendance
-    document.getElementById('stopAttendance').addEventListener('click', function() {
-        isAttendanceRunning = false;
-        if (attendanceInterval) {
-            clearInterval(attendanceInterval);
-        }
-        const video = document.getElementById('attendanceVideo');
-        video.srcObject.getTracks().forEach(track => track.stop());
-    });
-
-    // Export CSV
-    document.getElementById('exportCSV').addEventListener('click', function() {
-        exportToCSV();
-    });
-
-    // Load initial data
-    loadRegisteredStudents();
-    loadTodayAttendance();
-});
-
-// Process Attendance
-async function processAttendance(video) {
-    if (!isAttendanceRunning) return;
-    
-    const currentDescriptor = await getFaceDescriptor(video);
-    if (!currentDescriptor) return;
-    
-    const students = Storage.getStudents();
-    let bestMatch = null;
-    let minDistance = 0.5; // Similarity threshold (lower = more strict)
-    
-    // Compare with all registered students
-    students.forEach(student => {
-        student.descriptors.forEach(desc => {
-            // Convert stored array back to Float32Array for comparison
-            const storedDescriptor = new Float32Array(desc);
-            const distance = faceapi.euclideanDistance(currentDescriptor, storedDescriptor);
-            
-            if (distance < minDistance) {
-                minDistance = distance;
-                bestMatch = student;
-            }
-        });
-    });
-    
-    if (bestMatch) {
-        // Check if already marked today
-        const today = new Date().toISOString().split('T')[0];
-        const todayAttendance = Storage.getTodayAttendance();
-        const alreadyMarked = todayAttendance.some(record => record.studentId === bestMatch.id);
+        // চেক করুন আজকে এই ছাত্রের হাজিরা ইতিমধ্যে দেওয়া হয়েছে কিনা
+        const today = this.getTodayDateString();
+        const alreadyMarked = records.some(r => 
+            r.studentId === record.studentId && r.date === today
+        );
         
         if (!alreadyMarked) {
-            // Mark attendance
-            const now = new Date();
-            const attendanceRecord = {
-                studentId: bestMatch.id,
-                name: bestMatch.name,
-                class: bestMatch.class,
-                date: today,
-                time: now.toLocaleTimeString('bn-BD'),
-                day: getDayInBangla(now.getDay()),
-                status: 'present',
-                timestamp: now.getTime()
+            records.push(record);
+            localStorage.setItem(this.attendanceKey, JSON.stringify(records));
+            return true;
+        }
+        return false;
+    }
+
+    // সকল হাজিরা রেকর্ড
+    getAllAttendance() {
+        const data = localStorage.getItem(this.attendanceKey);
+        return data ? JSON.parse(data) : [];
+    }
+
+    // তারিখ অনুযায়ী হাজিরা রেকর্ড
+    getAttendanceByDate(date) {
+        const records = this.getAllAttendance();
+        return records.filter(record => record.date === date);
+    }
+
+    // আজকের হাজিরা রেকর্ড
+    getTodayAttendance() {
+        const today = this.getTodayDateString();
+        return this.getAttendanceByDate(today);
+    }
+
+    // ছাত্রের হাজিরা হিস্ট্রি
+    getStudentAttendance(studentId) {
+        const records = this.getAllAttendance();
+        return records.filter(record => record.studentId === studentId);
+    }
+
+    // তারিখ স্ট্রিং ফরম্যাট
+    getTodayDateString() {
+        const today = new Date();
+        return today.toISOString().split('T')[0]; // YYYY-MM-DD
+    }
+
+    // বাংলা তারিখ ফরম্যাট
+    getBanglaDateString(dateStr) {
+        const date = dateStr ? new Date(dateStr) : new Date();
+        const day = date.getDate();
+        const month = banglaMonths[date.getMonth()];
+        const year = date.getFullYear();
+        const dayName = banglaDays[date.getDay()];
+        
+        return `${day} ${month} ${year}, ${dayName}`;
+    }
+
+    // ডেটা ব্যাকআপ
+    backupData() {
+        const data = {
+            students: this.getAllStudents(),
+            attendance: this.getAllAttendance(),
+            backupDate: new Date().toISOString()
+        };
+        
+        const dataStr = JSON.stringify(data, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `attendance_backup_${this.getTodayDateString()}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        return true;
+    }
+
+    // ডেটা রিস্টোর
+    restoreData(jsonData) {
+        try {
+            const data = JSON.parse(jsonData);
+            
+            if (data.students && data.attendance) {
+                localStorage.setItem(this.studentsKey, JSON.stringify(data.students));
+                localStorage.setItem(this.attendanceKey, JSON.stringify(data.attendance));
+                return true;
+            }
+            return false;
+        } catch (error) {
+            console.error('Restore error:', error);
+            return false;
+        }
+    }
+
+    // ডেটা ক্লিয়ার
+    clearAllData() {
+        localStorage.removeItem(this.studentsKey);
+        localStorage.removeItem(this.attendanceKey);
+        return true;
+    }
+
+    // স্টোরেজ ব্যবহার
+    getStorageUsage() {
+        let total = 0;
+        for (let key in localStorage) {
+            if (localStorage.hasOwnProperty(key)) {
+                total += localStorage[key].length * 2; // UTF-16 characters are 2 bytes
+            }
+        }
+        return total;
+    }
+}
+
+// ফেস ডিটেকশন ক্লাস
+class FaceDetection {
+    constructor() {
+        this.storage = new AttendanceStorage();
+        this.modelsLoaded = false;
+    }
+
+    // মডেল লোড করা
+    async loadModels() {
+        try {
+            // CDN থেকে মডেল লোড করা হচ্ছে
+            // কোন আলাদা ডাউনলোডের প্রয়োজন নেই
+            await faceapi.nets.ssdMobilenetv1.loadFromUri(
+                'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights'
+            );
+            await faceapi.nets.faceLandmark68Net.loadFromUri(
+                'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights'
+            );
+            await faceapi.nets.faceRecognitionNet.loadFromUri(
+                'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights'
+            );
+            
+            this.modelsLoaded = true;
+            console.log('Face models loaded successfully from CDN');
+            return true;
+        } catch (error) {
+            console.error('Error loading face models:', error);
+            
+            // বিকল্প পদ্ধতি
+            try {
+                // সরাসরি CDN থেকে লোড করার চেষ্টা
+                await faceapi.loadSsdMobilenetv1Model('/');
+                await faceapi.loadFaceLandmarkModel('/');
+                await faceapi.loadFaceRecognitionModel('/');
+                
+                this.modelsLoaded = true;
+                console.log('Models loaded with alternative method');
+                return true;
+            } catch (fallbackError) {
+                console.error('Fallback also failed:', fallbackError);
+                return false;
+            }
+        }
+    }
+
+    // ক্যামেরা শুরু করা
+    async startCamera(videoElement, width = 640, height = 480) {
+        try {
+            const constraints = {
+                video: {
+                    width: { ideal: width },
+                    height: { ideal: height },
+                    facingMode: 'user'
+                },
+                audio: false
             };
             
-            Storage.saveAttendance(attendanceRecord);
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            videoElement.srcObject = stream;
             
-            // Show notification
-            showNotification(`${bestMatch.name} - হাজিরা নেওয়া হয়েছে!`);
+            // ভিডিও লোড হওয়ার অপেক্ষা
+            return new Promise((resolve) => {
+                videoElement.onloadedmetadata = () => {
+                    videoElement.play();
+                    resolve(true);
+                };
+            });
+        } catch (error) {
+            console.error('Camera error:', error);
             
-            // Update UI
-            loadTodayAttendance();
+            // Demo video as fallback for development
+            if (error.name === 'NotFoundError' || error.name === 'NotAllowedError') {
+                alert('ক্যামেরা অ্যাক্সেস দেওয়া হয়নি। ডেমো মোডে চালানো হচ্ছে।');
+                // একটি placeholder সেট করুন
+                videoElement.style.backgroundColor = '#333';
+                videoElement.innerHTML = '<div class="text-white text-center p-5"><i class="fas fa-camera-slash fa-3x"></i><p>ক্যামেরা নেই</p></div>';
+                return true;
+            }
+            
+            return false;
         }
-    } else {
-        console.log('No match found');
+    }
+
+    // ক্যামেরা বন্ধ করা
+    stopCamera(videoElement) {
+        if (videoElement.srcObject) {
+            const tracks = videoElement.srcObject.getTracks();
+            tracks.forEach(track => track.stop());
+            videoElement.srcObject = null;
+        }
+    }
+
+    // ফেস ডিটেক্ট করা
+    async detectFace(videoElement) {
+        if (!this.modelsLoaded) {
+            await this.loadModels();
+        }
+        
+        try {
+            const detection = await faceapi
+                .detectSingleFace(videoElement)
+                .withFaceLandmarks()
+                .withFaceDescriptor();
+            
+            return detection;
+        } catch (error) {
+            console.error('Face detection error:', error);
+            return null;
+        }
+    }
+
+    // ফেস ডিস্ক্রিপ্টর পাওয়া
+    async getFaceDescriptor(videoElement) {
+        const detection = await this.detectFace(videoElement);
+        return detection ? detection.descriptor : null;
+    }
+
+    // ছাত্র খোঁজা
+    async recognizeStudent(videoElement) {
+        const currentDescriptor = await this.getFaceDescriptor(videoElement);
+        
+        if (!currentDescriptor) {
+            return { found: false, message: 'কোনো মুখ চিহ্নিত করা যায়নি' };
+        }
+        
+        const students = this.storage.getAllStudents();
+        let bestMatch = null;
+        let minDistance = 0.5; // থ্রেশহোল্ড
+        
+        for (const student of students) {
+            for (const storedDescriptor of student.descriptors) {
+                // Array to Float32Array কনভার্ট করা
+                const storedDescArray = new Float32Array(storedDescriptor);
+                const distance = faceapi.euclideanDistance(currentDescriptor, storedDescArray);
+                
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    bestMatch = student;
+                }
+            }
+        }
+        
+        if (bestMatch) {
+            return {
+                found: true,
+                student: bestMatch,
+                confidence: (1 - minDistance) * 100
+            };
+        }
+        
+        return { found: false, message: 'কোনো মিল পাওয়া যায়নি' };
+    }
+
+    // একাধিক ছবি থেকে ফেস ডিস্ক্রিপ্টর তৈরি
+    async createFaceDescriptors(videoElement, count = 5) {
+        const descriptors = [];
+        
+        for (let i = 0; i < count; i++) {
+            const descriptor = await this.getFaceDescriptor(videoElement);
+            if (descriptor) {
+                descriptors.push(Array.from(descriptor)); // Float32Array to regular array
+                
+                // প্রতিটি ছবির মধ্যে বিরতি
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+        }
+        
+        return descriptors.length > 0 ? descriptors : null;
     }
 }
 
-// Helper Functions
-function getDayInBangla(dayIndex) {
-    const days = ['রবিবার', 'সোমবার', 'মঙ্গলবার', 'বুধবার', 'বৃহস্পতিবার', 'শুক্রবার', 'শনিবার'];
-    return days[dayIndex];
-}
-
-function showNotification(message) {
-    const notification = document.createElement('div');
-    notification.className = 'alert alert-success alert-dismissible fade show';
-    notification.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-    document.querySelector('.container').prepend(notification);
-    
-    setTimeout(() => notification.remove(), 3000);
-}
-
-function loadRegisteredStudents() {
-    const students = Storage.getStudents();
-    const container = document.getElementById('registeredStudents');
-    
-    if (students.length === 0) {
-        container.innerHTML = '<p class="text-muted">কোনো ছাত্র রেজিস্টার্ড নেই</p>';
-        return;
+// UI ম্যানেজমেন্ট ক্লাস
+class UIManager {
+    constructor() {
+        this.storage = new AttendanceStorage();
+        this.faceDetector = new FaceDetection();
+        this.initEventListeners();
+        this.updateUI();
     }
-    
-    let html = '<table class="table table-sm"><thead><tr><th>নাম</th><th>ক্লাস</th><th>রেজি. তারিখ</th></tr></thead><tbody>';
-    
-    students.forEach(student => {
-        const date = new Date(student.registrationDate).toLocaleDateString('bn-BD');
-        html += `<tr>
-            <td>${student.name}</td>
-            <td>${student.class}</td>
-            <td>${date}</td>
-        </tr>`;
-    });
-    
-    html += '</tbody></table>';
-    container.innerHTML = html;
-}
 
-function loadTodayAttendance() {
-    const attendance = Storage.getTodayAttendance();
-    const container = document.getElementById('todayAttendance');
-    
-    if (attendance.length === 0) {
-        container.innerHTML = '<p class="text-muted">আজকে এখনো হাজিরা নেওয়া হয়নি</p>';
-        return;
+    // ইভেন্ট লিসেনার সেটআপ
+    initEventListeners() {
+        // রেজিস্ট্রেশন ক্যামেরা শুরু
+        document.getElementById('startRegistrationCamera').addEventListener('click', () => {
+            this.startRegistrationCamera();
+        });
+
+        // ছবি তোলা
+        document.getElementById('capturePhoto').addEventListener('click', () => {
+            this.captureRegistrationPhoto();
+        });
+
+        // ছাত্র রেজিস্টার
+        document.getElementById('registerStudentBtn').addEventListener('click', () => {
+            this.registerStudent();
+        });
+
+        // হাজিরা শুরু
+        document.getElementById('startAttendanceBtn').addEventListener('click', () => {
+            this.startAttendance();
+        });
+
+        // হাজিরা বন্ধ
+        document.getElementById('stopAttendanceBtn').addEventListener('click', () => {
+            this.stopAttendance();
+        });
+
+        // ম্যানুয়াল মার্ক
+        document.getElementById('manualMarkBtn').addEventListener('click', () => {
+            this.showManualMarkModal();
+        });
+
+        // সব ছাত্র দেখুন
+        document.getElementById('viewAllStudents').addEventListener('click', () => {
+            this.showAllStudentsModal();
+        });
+
+        // রিপোর্ট তৈরি
+        document.getElementById('generateReportBtn').addEventListener('click', () => {
+            this.generateReport();
+        });
+
+        // ডেটা ব্যাকআপ
+        document.getElementById('backupDataBtn').addEventListener('click', () => {
+            this.backupData();
+        });
+
+        // ডেটা রিস্টোর
+        document.getElementById('restoreDataBtn').addEventListener('click', () => {
+            this.restoreData();
+        });
+
+        // CSV এক্সপোর্ট
+        document.getElementById('exportTodayBtn').addEventListener('click', () => {
+            this.exportTodayCSV();
+        });
+
+        document.getElementById('exportAllBtn').addEventListener('click', () => {
+            this.exportAllCSV();
+        });
+
+        // আজকের হাজিরা ক্লিয়ার
+        document.getElementById('clearTodayBtn').addEventListener('click', () => {
+            this.clearTodayAttendance();
+        });
+
+        // সব ডেটা ক্লিয়ার
+        document.getElementById('clearAllDataBtn').addEventListener('click', () => {
+            this.clearAllData();
+        });
+
+        // ম্যানুয়াল মার্ক কনফার্ম
+        document.getElementById('confirmManualMark').addEventListener('click', () => {
+            this.markManualAttendance();
+        });
+
+        // তারিখ সেট করা
+        document.getElementById('reportDate').value = this.storage.getTodayDateString();
+        document.getElementById('todayDate').textContent = this.storage.getBanglaDateString();
     }
-    
-    let html = '<table class="table table-sm table-success"><thead><tr><th>নাম</th><th>ক্লাস</th><th>সময়</th></tr></thead><tbody>';
-    
-    attendance.forEach(record => {
-        html += `<tr>
-            <td>${record.name}</td>
-            <td>${record.class}</td>
-            <td>${record.time}</td>
-        </tr>`;
-    });
-    
-    html += '</tbody></table>';
-    container.innerHTML = html;
-}
 
-function exportToCSV() {
-    const attendance = Storage.getAttendance();
-    if (attendance.length === 0) {
-        alert('কোনো ডেটা নেই');
-        return;
+    // রেজিস্ট্রেশন ক্যামেরা শুরু
+    async startRegistrationCamera() {
+        const video = document.getElementById('registrationVideo');
+        const startBtn = document.getElementById('startRegistrationCamera');
+        const captureBtn = document.getElementById('capturePhoto');
+        
+        startBtn.disabled = true;
+        startBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> লোড হচ্ছে...';
+        
+        // ফেস মডেল লোড করা
+        const modelsLoaded = await this.faceDetector.loadModels();
+        
+        if (modelsLoaded) {
+            const cameraStarted = await this.faceDetector.startCamera(video);
+            
+            if (cameraStarted) {
+                startBtn.style.display = 'none';
+                captureBtn.disabled = false;
+                this.showAlert('ক্যামেরা চালু হয়েছে! এখন ছবি তোলা শুরু করুন।', 'success');
+            } else {
+                startBtn.disabled = false;
+                startBtn.innerHTML = '<i class="fas fa-camera"></i> ক্যামেরা চালু করুন';
+                this.showAlert('ক্যামেরা চালু করতে সমস্যা হচ্ছে।', 'danger');
+            }
+        } else {
+            startBtn.disabled = false;
+            startBtn.innerHTML = '<i class="fas fa-camera"></i> ক্যামেরা চালু করুন';
+            this.showAlert('ফেস মডেল লোড করতে সমস্যা হচ্ছে। ইন্টারনেট সংযোগ চেক করুন।', 'danger');
+        }
     }
-    
-    let csv = 'নাম,ক্লাস,তারিখ,দিন,সময়,স্ট্যাটাস\n';
-    
-    attendance.forEach(record => {
-        csv += `"${record.name}","${record.class}","${record.date}","${record.day}","${record.time}","${record.status}"\n`;
-    });
-    
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `attendance_${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-}
 
-// Load models when page loads
-window.onload = loadFaceModels;
+    // রেজিস্ট্রেশন ছবি তোলা
+    async captureRegistrationPhoto() {
+        const video = document.getElementById('registrationVideo');
+        const captureBtn = document.getElementById('capturePhoto');
+        const registerBtn = document.getElementById('registerStudentBtn');
+        const previewDiv = document.getElementById('photoPreview');
+        const photoCount = document.getElementById('photoCount');
+        const progressBar = document.getElementById('photoProgress');
+        
+        captureBtn.disabled = true;
+        captureBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> প্রক্রিয়াধীন...';
+        
+        // ছবি ক্যাপচ
